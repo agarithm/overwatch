@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Overwatch AI",
+  "version": "1.0.0",
+  "description": "Add local Ollama-based chat to all websites",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "http://localhost:11434/"
+  ],
+  "host_permissions": [
+    "http://localhost:11434/*"
+  ],
+  "action": {
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "css": ["styles.css"],
+      "js": ["content-script.js"]
+    }
+  ]
+}
