@@ -1,12 +1,26 @@
 /// <reference types="chrome"/>
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+interface ChatMessagePayload {
+  message: string;
+  pageContent: string;
+  history: Array<{ role: 'user' | 'assistant', content: string }>;
+}
+
+interface OllamaResponse {
+  message: { content: string };
+}
+
+chrome.runtime.onMessage.addListener((
+  message: { type: string; payload: ChatMessagePayload },
+  sender: chrome.runtime.MessageSender,
+  sendResponse: (response?: any) => void
+) => {
   if (message.type === 'CHAT_MESSAGE') {
-    handleChatMessage(message.payload);
+    handleChatMessage(message.payload, sender);
   }
 });
 
-async function handleChatMessage({ message, pageContent, history }) {
+async function handleChatMessage(payload: ChatMessagePayload, sender: chrome.runtime.MessageSender) {
   try {
     const response = await fetch('http://localhost:11434/api/chat', {
       method: 'POST',
@@ -18,19 +32,21 @@ async function handleChatMessage({ message, pageContent, history }) {
         messages: [
           {
             role: 'system',
-            content: `You are a helpful AI assistant. Context from the current webpage: ${pageContent}`
+            content: `You are a helpful AI assistant. Context from the current webpage: ${payload.pageContent}`
           },
-          ...history
+          ...payload.history
         ]
       })
     });
 
-    const data = await response.json();
-    // Send response back to content script
-    chrome.tabs.sendMessage(sender.tab.id, {
-      type: 'CHAT_RESPONSE',
-      payload: data.message
-    });
+    const data: OllamaResponse = await response.json();
+    
+    if (sender.tab?.id) {
+      chrome.tabs.sendMessage(sender.tab.id, {
+        type: 'CHAT_RESPONSE',
+        payload: data.message.content
+      });
+    }
   } catch (error) {
     console.error('Error communicating with Ollama:', error);
   }
