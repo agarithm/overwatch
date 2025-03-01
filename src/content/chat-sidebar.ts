@@ -99,15 +99,41 @@ export class ChatSidebar {
     const chatContainer = document.createElement('div');
     chatContainer.className = 'chat-container';
     
-    const toolbarContainer = document.createElement('div');
-    toolbarContainer.className = 'chat-toolbar';
+    // Create top toolbar row with close button
+    const topToolbarContainer = document.createElement('div');
+    topToolbarContainer.className = 'chat-toolbar top-toolbar';
     
+    // Create a container for the hotkey hint and close button
+    const closeButtonContainer = document.createElement('div');
+    closeButtonContainer.className = 'close-button-container';
+    
+    // Add close button to top row
+    const closeButton = document.createElement('button');
+    closeButton.className = 'sidebar-close-button';
+    closeButton.innerHTML = '✕';
+    closeButton.title = 'Close sidebar (Alt+W)';
+    closeButton.addEventListener('click', () => this.hide());
+    
+    // Add both elements to the container
+    closeButtonContainer.appendChild(closeButton);
+    
+    // Push the container to the right
+    closeButtonContainer.style.marginLeft = 'auto';
+    
+    // Add the container to the toolbar
+    topToolbarContainer.appendChild(closeButtonContainer);
+    
+    // Create second toolbar row with clear history button
+    const secondToolbarContainer = document.createElement('div');
+    secondToolbarContainer.className = 'chat-toolbar second-toolbar';
+    
+    // Add clear history button to second row
     const clearButton = document.createElement('button');
     clearButton.className = 'clear-history-button';
     clearButton.innerHTML = '🗑️ Clear History';
     clearButton.addEventListener('click', () => this.clearHistory());
     
-    toolbarContainer.appendChild(clearButton);
+    secondToolbarContainer.appendChild(clearButton);
     
     const input = document.createElement('textarea');
     input.className = 'chat-input';
@@ -126,7 +152,8 @@ export class ChatSidebar {
     });
 
     this.container.appendChild(this.resizer);
-    this.container.appendChild(toolbarContainer);
+    this.container.appendChild(topToolbarContainer);
+    this.container.appendChild(secondToolbarContainer);
     this.container.appendChild(chatContainer);
     this.container.appendChild(input);
   }

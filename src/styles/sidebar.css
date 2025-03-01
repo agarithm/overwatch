@@ -42,6 +42,7 @@
 }
 
 .chat-input {
+  margin: 0px 3px 3px 8px;
   border-top: 1px solid #eee;
   padding: 10px;
   resize: none;
