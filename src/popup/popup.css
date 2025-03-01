@@ -102,3 +102,20 @@ label {
   font-family: monospace;
   font-weight: bold;
 }
+
+.danger-button {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  width: 100%;
+  margin-bottom: 16px;
+  transition: background-color 0.2s;
+}
+
+.danger-button:hover {
+  background-color: #e53935;
+}

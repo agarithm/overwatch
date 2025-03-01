@@ -65,3 +65,32 @@
   background-color: #f1f1f1;
   align-self: flex-start;
 }
+
+.chat-toolbar {
+  padding: 5px 10px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.clear-history-button {
+  background: transparent;
+  border: none;
+  color: #666;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.clear-history-button:hover {
+  background-color: #f2f2f2;
+  color: #e53935;
+}
+
+.system-message {
+  background-color: #f9f9f9;
+  border-radius: 4px;
+  margin: 10px 0;
+  font-size: 12px;
+}

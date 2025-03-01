@@ -4,11 +4,14 @@ export class ChatSidebar {
   private container: HTMLDivElement;
   private resizer: HTMLDivElement;
   private chatHistory: Array<{role: 'user' | 'assistant', content: string}> = [];
-  private _isVisible: boolean = false;  // Renamed to _isVisible to avoid conflict with method
+  private _isVisible: boolean = false;
   private currentModel: string = 'mistral';
   private defaultWidth: number = 300; // Default width in pixels
   private currentHost: string = '';
-  private siteSettings: Record<string, { width: number }> = {};
+  private siteSettings: Record<string, { 
+    width: number;
+    chatHistory?: Array<{role: 'user' | 'assistant', content: string}>;
+  }> = {};
 
   constructor() {
     this.container = document.createElement('div');
@@ -21,7 +24,7 @@ export class ChatSidebar {
     // Store current host
     this.currentHost = window.location.hostname || 'default';
     
-    // Get stored size settings
+    // Get stored size settings and chat history
     this.loadSiteSettings();
     
     this.initializeSidebar();
@@ -40,6 +43,12 @@ export class ChatSidebar {
       if (result.sidebarSiteSettings) {
         this.siteSettings = result.sidebarSiteSettings;
         console.log('Loaded site settings:', this.siteSettings);
+        
+        // Load chat history for this site
+        if (this.siteSettings[this.currentHost]?.chatHistory) {
+          this.chatHistory = this.siteSettings[this.currentHost].chatHistory || [];
+          console.log(`Loaded ${this.chatHistory.length} chat messages for ${this.currentHost}`);
+        }
       }
     } catch (e) {
       console.error('Error loading sidebar settings:', e);
@@ -49,8 +58,16 @@ export class ChatSidebar {
 
   private async saveSiteSettings() {
     try {
+      // Ensure we have an entry for the current host
+      if (!this.siteSettings[this.currentHost]) {
+        this.siteSettings[this.currentHost] = { width: this.defaultWidth };
+      }
+      
+      // Update chat history in settings
+      this.siteSettings[this.currentHost].chatHistory = this.chatHistory;
+      
       await chrome.storage.local.set({ 'sidebarSiteSettings': this.siteSettings });
-      console.log('Saved site settings:', this.siteSettings);
+      console.log('Saved site settings with chat history');
     } catch (e) {
       console.error('Error saving sidebar settings:', e);
     }
@@ -82,6 +99,16 @@ export class ChatSidebar {
     const chatContainer = document.createElement('div');
     chatContainer.className = 'chat-container';
     
+    const toolbarContainer = document.createElement('div');
+    toolbarContainer.className = 'chat-toolbar';
+    
+    const clearButton = document.createElement('button');
+    clearButton.className = 'clear-history-button';
+    clearButton.innerHTML = '🗑️ Clear History';
+    clearButton.addEventListener('click', () => this.clearHistory());
+    
+    toolbarContainer.appendChild(clearButton);
+    
     const input = document.createElement('textarea');
     input.className = 'chat-input';
     input.placeholder = 'Ask anything about this page...';
@@ -99,6 +126,7 @@ export class ChatSidebar {
     });
 
     this.container.appendChild(this.resizer);
+    this.container.appendChild(toolbarContainer);
     this.container.appendChild(chatContainer);
     this.container.appendChild(input);
   }
@@ -164,6 +192,9 @@ export class ChatSidebar {
   private async sendMessage(message: string) {
     const pageContent = document.body.innerText;
     this.chatHistory.push({ role: 'user', content: message });
+    
+    // Save history after adding message
+    this.saveSiteSettings();
 
     // Send message to background script
     chrome.runtime.sendMessage({
@@ -175,6 +206,63 @@ export class ChatSidebar {
         model: this.currentModel
       }
     });
+  }
+  
+  // Add method to clear history for current site
+  public clearHistory() {
+    console.log('Clearing chat history for', this.currentHost);
+    this.chatHistory = [];
+    
+    // Clear the chat container UI
+    const chatContainer = this.container.querySelector('.chat-container');
+    if (chatContainer) {
+      chatContainer.innerHTML = '';
+      
+      // Add a notification that history was cleared
+      const notification = document.createElement('div');
+      notification.className = 'system-message';
+      notification.textContent = 'Chat history cleared';
+      notification.style.textAlign = 'center';
+      notification.style.padding = '10px';
+      notification.style.color = '#666';
+      notification.style.fontStyle = 'italic';
+      chatContainer.appendChild(notification);
+      
+      // Remove notification after a few seconds
+      setTimeout(() => {
+        notification.remove();
+      }, 3000);
+    }
+    
+    // Update storage
+    if (this.siteSettings[this.currentHost]) {
+      this.siteSettings[this.currentHost].chatHistory = [];
+      this.saveSiteSettings();
+    }
+  }
+
+  // Update the sidebar UI to display cached conversations
+  private displayCachedConversation() {
+    if (this.chatHistory.length === 0) return;
+    
+    const chatContainer = this.container.querySelector('.chat-container');
+    if (!chatContainer) return;
+    
+    // Clear existing messages (if any)
+    chatContainer.innerHTML = '';
+    
+    // Display history
+    this.chatHistory.forEach(message => {
+      const messageElement = document.createElement('div');
+      messageElement.className = message.role === 'user' 
+        ? 'message user-message' 
+        : 'message assistant-message';
+      messageElement.textContent = message.content;
+      chatContainer.appendChild(messageElement);
+    });
+    
+    // Scroll to bottom
+    chatContainer.scrollTop = chatContainer.scrollHeight;
   }
 
   public async show() {
@@ -188,6 +276,9 @@ export class ChatSidebar {
     
     // Force the browser to recompute layout before making visible
     this.container.getBoundingClientRect();
+    
+    // Display any cached conversation
+    this.displayCachedConversation();
     
     // Make it visible
     this._isVisible = true;
@@ -232,6 +323,9 @@ export class ChatSidebar {
 
     // Add the assistant's response to chat history
     this.chatHistory.push({ role: 'assistant', content: response });
+    
+    // Save history after adding response
+    this.saveSiteSettings();
 
     // Create and append the message element
     const messageElement = document.createElement('div');

@@ -146,6 +146,13 @@ if (!(window as any)[OVERWATCH_INITIALIZED]) {
       } else {
         sendResponse({success: false});
       }
+    } else if (request.type === 'CLEAR_HISTORY') {
+      if (sidebar) {
+        sidebar.clearHistory();
+        sendResponse({success: true});
+      } else {
+        sendResponse({success: false});
+      }
     }
     
     // Return true to indicate we want to send a response asynchronously

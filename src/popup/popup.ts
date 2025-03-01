@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const hideButton = document.getElementById('hideSidebar') as HTMLButtonElement;
   const modelSelect = document.getElementById('model-select') as HTMLSelectElement;
   const statusMessage = document.getElementById('statusMessage') as HTMLDivElement;
+  const clearAllButton = document.getElementById('clearAllHistory') as HTMLButtonElement;
   
   async function sendSidebarCommand(action: 'SHOW_SIDEBAR' | 'HIDE_SIDEBAR') {
     try {
@@ -116,6 +117,51 @@ document.addEventListener('DOMContentLoaded', function() {
       setTimeout(() => {
         statusMessage.textContent = '';
       }, 2000);
+    });
+  }
+  
+  if (clearAllButton) {
+    clearAllButton.addEventListener('click', async function() {
+      if (confirm('Are you sure you want to clear chat history for all sites?')) {
+        try {
+          // Get the current settings
+          const result = await chrome.storage.local.get('sidebarSiteSettings');
+          const settings = result.sidebarSiteSettings || {};
+          
+          // Clear chat history for all sites but keep width settings
+          for (const host in settings) {
+            if (settings[host].chatHistory) {
+              settings[host].chatHistory = [];
+            }
+          }
+          
+          // Save back to storage
+          await chrome.storage.local.set({ 'sidebarSiteSettings': settings });
+          
+          // Notify all tabs of the change
+          const tabs = await chrome.tabs.query({});
+          for (const tab of tabs) {
+            if (tab.id) {
+              chrome.tabs.sendMessage(tab.id, {
+                type: 'CLEAR_HISTORY'
+              }).catch(() => {
+                // Ignore errors for tabs that don't have content script
+              });
+            }
+          }
+          
+          // Show success message
+          statusMessage.textContent = 'Chat history cleared for all sites';
+          statusMessage.style.color = 'green';
+          setTimeout(() => {
+            statusMessage.textContent = '';
+          }, 2000);
+          
+        } catch (error) {
+          statusMessage.textContent = 'Error: ' + (error as Error).message;
+          statusMessage.style.color = 'red';
+        }
+      }
     });
   }
 });
