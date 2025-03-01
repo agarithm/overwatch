@@ -20,6 +20,14 @@ if (!(window as any)[OVERWATCH_INITIALIZED]) {
       sidebar = new ChatSidebar();
       document.body.appendChild(sidebar.getContainer());
       console.log('Sidebar container added to DOM');
+      
+      // Add window resize listener
+      window.addEventListener('resize', () => {
+        // Use the method correctly with parentheses
+        if (sidebar && sidebar.isVisible()) {
+          sidebar.applyConstraints();
+        }
+      });
     } else {
       console.log('Sidebar already initialized');
     }

@@ -4,8 +4,11 @@ export class ChatSidebar {
   private container: HTMLDivElement;
   private resizer: HTMLDivElement;
   private chatHistory: Array<{role: 'user' | 'assistant', content: string}> = [];
-  private isVisible: boolean = false;
+  private _isVisible: boolean = false;  // Renamed to _isVisible to avoid conflict with method
   private currentModel: string = 'mistral';
+  private defaultWidth: number = 300; // Default width in pixels
+  private currentHost: string = '';
+  private siteSettings: Record<string, { width: number }> = {};
 
   constructor() {
     this.container = document.createElement('div');
@@ -15,11 +18,64 @@ export class ChatSidebar {
     this.resizer = document.createElement('div');
     this.resizer.className = 'sidebar-resizer';
     
+    // Store current host
+    this.currentHost = window.location.hostname || 'default';
+    
+    // Get stored size settings
+    this.loadSiteSettings();
+    
     this.initializeSidebar();
     this.setupResizer();
     
+    // Initialize with proper width (from storage or default)
+    this.applyInitialWidth();
+    
     // Make sure the sidebar is initially hidden
-    this.container.style.right = '-400px';
+    this.container.style.right = '-9999px'; // Hide off-screen initially
+  }
+
+  private async loadSiteSettings() {
+    try {
+      const result = await chrome.storage.local.get('sidebarSiteSettings');
+      if (result.sidebarSiteSettings) {
+        this.siteSettings = result.sidebarSiteSettings;
+        console.log('Loaded site settings:', this.siteSettings);
+      }
+    } catch (e) {
+      console.error('Error loading sidebar settings:', e);
+      this.siteSettings = {};
+    }
+  }
+
+  private async saveSiteSettings() {
+    try {
+      await chrome.storage.local.set({ 'sidebarSiteSettings': this.siteSettings });
+      console.log('Saved site settings:', this.siteSettings);
+    } catch (e) {
+      console.error('Error saving sidebar settings:', e);
+    }
+  }
+
+  private applyInitialWidth() {
+    // Determine appropriate width: site-specific, default, or constrained percentage
+    let targetWidth = this.defaultWidth;
+    
+    // If we have a stored width for this site, use that
+    if (this.siteSettings[this.currentHost]?.width) {
+      targetWidth = this.siteSettings[this.currentHost].width;
+      console.log(`Using stored width for ${this.currentHost}:`, targetWidth);
+    }
+    
+    // Constrain within 15-50% of viewport
+    const minWidth = Math.max(window.innerWidth * 0.15, 100);
+    const maxWidth = window.innerWidth * 0.5;
+    
+    if (targetWidth < minWidth) targetWidth = minWidth;
+    if (targetWidth > maxWidth) targetWidth = maxWidth;
+    
+    // Apply the width
+    this.container.style.width = `${targetWidth}px`;
+    console.log('Initial sidebar width set to:', targetWidth);
   }
 
   private initializeSidebar() {
@@ -75,6 +131,17 @@ export class ChatSidebar {
     const stopResize = () => {
       document.removeEventListener('mousemove', resize);
       document.removeEventListener('mouseup', stopResize);
+      
+      // Save the new width for this site
+      const currentWidth = parseInt(getComputedStyle(this.container).width, 10);
+      if (currentWidth > 0) {
+        if (!this.siteSettings[this.currentHost]) {
+          this.siteSettings[this.currentHost] = { width: currentWidth };
+        } else {
+          this.siteSettings[this.currentHost].width = currentWidth;
+        }
+        this.saveSiteSettings();
+      }
     };
     
     this.resizer.addEventListener('mousedown', startResize);
@@ -110,29 +177,36 @@ export class ChatSidebar {
     });
   }
 
-  public show() {
+  public async show() {
     console.log('Show sidebar called');
-    this.isVisible = true;
+    
+    // Ensure we have the latest settings
+    await this.loadSiteSettings();
+    
+    // Apply the appropriate width before showing
+    this.applyInitialWidth();
+    
+    this._isVisible = true;  // Use renamed property
     this.container.style.right = '0px';
-    console.log('Sidebar shown, right style:', this.container.style.right);
+    console.log('Sidebar shown, width:', this.container.style.width);
   }
   
   public hide() {
     console.log('Hide sidebar called');
-    this.isVisible = false;
-    this.container.style.right = '-400px';
-    console.log('Sidebar hidden, right style:', this.container.style.right);
+    this._isVisible = false;  // Use renamed property
+    this.container.style.right = '-9999px'; // Hide off-screen
+    console.log('Sidebar hidden');
   }
   
   // For backward compatibility
   public toggle() {
-    if (this.isVisible) {
+    if (this._isVisible) {  // Use renamed property
       this.hide();
     } else {
       this.show();
     }
   }
-
+  
   public getContainer(): HTMLDivElement {
     return this.container;
   }
@@ -176,6 +250,32 @@ export class ChatSidebar {
       setTimeout(() => {
         modelNotification.remove();
       }, 3000);
+    }
+  }
+  
+  // Method to check visibility status
+  public isVisible(): boolean {
+    return this._isVisible;  // Return the renamed property
+  }
+  
+  public applyConstraints(): void {
+    // Re-constrain the width based on the current window size
+    const currentWidth = parseInt(getComputedStyle(this.container).width, 10);
+    const minWidth = Math.max(window.innerWidth * 0.15, 100);
+    const maxWidth = window.innerWidth * 0.5;
+    
+    let newWidth = currentWidth;
+    if (newWidth < minWidth) newWidth = minWidth;
+    if (newWidth > maxWidth) newWidth = maxWidth;
+    
+    if (newWidth !== currentWidth) {
+      this.container.style.width = `${newWidth}px`;
+      
+      // Update stored settings
+      if (this.siteSettings[this.currentHost]) {
+        this.siteSettings[this.currentHost].width = newWidth;
+        this.saveSiteSettings();
+      }
     }
   }
 }

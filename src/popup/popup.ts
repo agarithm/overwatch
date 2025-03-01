@@ -29,31 +29,32 @@ document.addEventListener('DOMContentLoaded', function() {
           console.error('Error sending command:', chrome.runtime.lastError.message);
           
           // Try injecting content script as fallback
-          try {
-            chrome.scripting.executeScript({
+          chrome.scripting.executeScript({
+            target: { tabId: activeTabId },
+            files: ['content-script.js']
+          }).then(() => {
+            chrome.scripting.insertCSS({
               target: { tabId: activeTabId },
-              files: ['content-script.js']
+              files: ['styles.css']
             }).then(() => {
-              chrome.scripting.insertCSS({
-                target: { tabId: activeTabId },
-                files: ['styles.css']
-              }).then(() => {
-                // Try again after injection
-                chrome.tabs.sendMessage(activeTabId, { type: action }, (secondResponse) => {
-                  if (chrome.runtime.lastError) {
-                    statusMessage.textContent = 'Still cannot communicate with page';
-                    statusMessage.style.color = 'red';
-                  } else {
-                    statusMessage.textContent = action === 'SHOW_SIDEBAR' ? 'Sidebar shown' : 'Sidebar hidden';
-                    statusMessage.style.color = 'green';
-                  }
-                });
+              // Try again after injection
+              chrome.tabs.sendMessage(activeTabId, { type: action }, (secondResponse) => {
+                if (chrome.runtime.lastError) {
+                  statusMessage.textContent = 'Still cannot communicate with page';
+                  statusMessage.style.color = 'red';
+                } else {
+                  statusMessage.textContent = action === 'SHOW_SIDEBAR' ? 'Sidebar shown' : 'Sidebar hidden';
+                  statusMessage.style.color = 'green';
+                }
               });
+            }).catch(error => {
+              statusMessage.textContent = 'Cannot inject CSS: ' + error.message;
+              statusMessage.style.color = 'red';
             });
-          } catch (err) {
-            statusMessage.textContent = 'Cannot access this page';
+          }).catch(error => {
+            statusMessage.textContent = 'Cannot access page: ' + error.message;
             statusMessage.style.color = 'red';
-          }
+          });
         } else {
           // Success
           statusMessage.textContent = action === 'SHOW_SIDEBAR' ? 'Sidebar shown' : 'Sidebar hidden';
@@ -101,6 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
         tabs.forEach(tab => {
           const tabId = tab.id;
           if (tabId) {
+            // Fix: Use proper error handling with promises
             chrome.tabs.sendMessage(tabId, {
               type: 'MODEL_CHANGED',
               model: modelSelect.value

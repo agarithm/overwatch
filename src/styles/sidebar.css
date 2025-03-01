@@ -1,17 +1,18 @@
 .overwatch-sidebar {
   position: fixed;
   top: 0;
-  right: -400px; /* Start off-screen */
-  width: 100px;
+  right: -9999px; /* Start off-screen */
+  width: 300px; /* Default starting width */
   min-width: 100px;
   max-width: 50vw;
   height: 100vh;
   background-color: white;
   box-shadow: -2px 0 10px rgba(0,0,0,0.2);
-  transition: right 0.3s ease;
+  transition: right 0.3s ease; /* Only transition the right property */
   z-index: 9999;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 .overwatch-sidebar.visible {
@@ -26,9 +27,11 @@
   height: 100%;
   cursor: ew-resize;
   background-color: rgba(0, 0, 0, 0.1);
+  z-index: 10000;
 }
 
-.sidebar-resizer:hover {
+.sidebar-resizer:hover,
+.sidebar-resizer:active {
   background-color: rgba(0, 0, 0, 0.2);
 }
 
