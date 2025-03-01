@@ -1,17 +1,20 @@
 /// <reference types="chrome"/>
 
-interface ChatMessagePayload {
-  message: string;
-  pageContent: string;
-  history: Array<{ role: 'user' | 'assistant', content: string }>;
+interface ChatMessage {
+  type: string;
+  payload: {
+    message: string;
+    pageContent: string;
+    history: Array<{ role: 'user' | 'assistant'; content: string }>;
+  };
 }
 
 interface OllamaResponse {
-  message: { content: string };
+  message: string;
 }
 
 chrome.runtime.onMessage.addListener((
-  message: { type: string; payload: ChatMessagePayload },
+  message: ChatMessage,
   sender: chrome.runtime.MessageSender,
   sendResponse: (response?: any) => void
 ) => {
@@ -20,7 +23,10 @@ chrome.runtime.onMessage.addListener((
   }
 });
 
-async function handleChatMessage(payload: ChatMessagePayload, sender: chrome.runtime.MessageSender) {
+async function handleChatMessage(
+  payload: ChatMessage['payload'],
+  sender: chrome.runtime.MessageSender
+) {
   try {
     const response = await fetch('http://localhost:11434/api/chat', {
       method: 'POST',
@@ -44,7 +50,7 @@ async function handleChatMessage(payload: ChatMessagePayload, sender: chrome.run
     if (sender.tab?.id) {
       chrome.tabs.sendMessage(sender.tab.id, {
         type: 'CHAT_RESPONSE',
-        payload: data.message.content
+        payload: data.message
       });
     }
   } catch (error) {
