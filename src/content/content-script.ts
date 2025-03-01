@@ -23,23 +23,32 @@ if (!(window as any)[OVERWATCH_INITIALIZED]) {
     } else {
       console.log('Sidebar already initialized');
     }
+    return sidebar;
   }
 
   // Listen for messages from the popup or background script
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('Content script received message:', request.type);
     
-    if (request.type === 'TOGGLE_SIDEBAR') {
-      console.log('Toggle sidebar message received');
-      
-      // Initialize if not already done
-      if (!sidebar) {
-        initialize();
-      }
-      
+    // Make sure sidebar is initialized for any operation
+    if (!sidebar) {
+      sidebar = initialize();
+    }
+    
+    if (request.type === 'SHOW_SIDEBAR') {
+      console.log('Show sidebar message received');
       if (sidebar) {
-        sidebar.toggle();
-        sendResponse({success: true});
+        sidebar.show();
+        sendResponse({success: true, action: 'shown'});
+      } else {
+        console.error('Failed to initialize sidebar');
+        sendResponse({success: false, error: 'Failed to initialize sidebar'});
+      }
+    } else if (request.type === 'HIDE_SIDEBAR') {
+      console.log('Hide sidebar message received');
+      if (sidebar) {
+        sidebar.hide();
+        sendResponse({success: true, action: 'hidden'});
       } else {
         console.error('Failed to initialize sidebar');
         sendResponse({success: false, error: 'Failed to initialize sidebar'});

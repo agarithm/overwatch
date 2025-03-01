@@ -9,9 +9,14 @@
     <h2>Overwatch AI</h2>
     <p>Control your AI assistant sidebar</p>
     
-    <button id="toggleSidebar" class="action-button">
-      Toggle Sidebar
-    </button>
+    <div class="button-group">
+      <button id="showSidebar" class="action-button show-button">
+        Show Sidebar
+      </button>
+      <button id="hideSidebar" class="action-button hide-button">
+        Hide Sidebar
+      </button>
+    </div>
     
     <div class="divider"></div>
     
@@ -23,6 +28,8 @@
         <option value="gemma">Gemma</option>
       </select>
     </div>
+    
+    <div id="statusMessage" class="status-message"></div>
   </div>
   <script src="popup.js"></script>
 </body>

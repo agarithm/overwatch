@@ -1,76 +1,84 @@
 /// <reference types="chrome"/>
 
 document.addEventListener('DOMContentLoaded', function() {
-  const toggleButton = document.getElementById('toggleSidebar') as HTMLButtonElement;
+  const showButton = document.getElementById('showSidebar') as HTMLButtonElement;
+  const hideButton = document.getElementById('hideSidebar') as HTMLButtonElement;
   const modelSelect = document.getElementById('model-select') as HTMLSelectElement;
-  const statusMessage = document.createElement('div');
-  statusMessage.className = 'status-message';
-  document.querySelector('.popup-container')?.appendChild(statusMessage);
+  const statusMessage = document.getElementById('statusMessage') as HTMLDivElement;
   
-  if (toggleButton) {
-    toggleButton.addEventListener('click', async function() {
-      statusMessage.textContent = 'Toggling sidebar...';
+  async function sendSidebarCommand(action: 'SHOW_SIDEBAR' | 'HIDE_SIDEBAR') {
+    try {
+      // Get current active tab
+      const tabs = await chrome.tabs.query({active: true, currentWindow: true});
+      const activeTabId = tabs[0]?.id;
+      
+      if (!activeTabId) {
+        throw new Error('No active tab found');
+      }
+      
+      // Set status message
+      statusMessage.textContent = action === 'SHOW_SIDEBAR' ? 'Showing sidebar...' : 'Hiding sidebar...';
       statusMessage.style.color = '#666';
       
-      // Get the active tab and send a message to toggle the sidebar
-      try {
-        const tabs = await chrome.tabs.query({active: true, currentWindow: true});
-        const activeTabId = tabs[0]?.id;
-        
-        if (!activeTabId) {
-          throw new Error('No active tab found');
-        }
-        
-        // First ensure the content script is injected
-        try {
-          await chrome.scripting.executeScript({
-            target: { tabId: activeTabId },
-            func: () => {
-              // Just checking if we can execute in the tab
-              return true;
-            }
-          });
-        } catch (e) {
-          console.log('Tab not accessible for script injection, using message only');
-        }
-        
-        // Now try to send the message
-        chrome.tabs.sendMessage(activeTabId, {
-          type: 'TOGGLE_SIDEBAR'
-        }, (response) => {
-          if (chrome.runtime.lastError) {
-            statusMessage.textContent = 'Error: ' + chrome.runtime.lastError.message;
-            statusMessage.style.color = 'red';
-            console.error('Error toggling sidebar:', chrome.runtime.lastError.message);
-            
-            // Try to inject content script as fallback
+      // Send message to content script
+      chrome.tabs.sendMessage(activeTabId, { type: action }, (response) => {
+        if (chrome.runtime.lastError) {
+          // Error occurred
+          statusMessage.textContent = 'Error: ' + chrome.runtime.lastError.message;
+          statusMessage.style.color = 'red';
+          console.error('Error sending command:', chrome.runtime.lastError.message);
+          
+          // Try injecting content script as fallback
+          try {
             chrome.scripting.executeScript({
               target: { tabId: activeTabId },
               files: ['content-script.js']
             }).then(() => {
-              statusMessage.textContent = 'Injected content script, try again';
-              statusMessage.style.color = 'blue';
-            }).catch(err => {
-              statusMessage.textContent = 'Cannot access page: ' + err.message;
-              statusMessage.style.color = 'red';
+              chrome.scripting.insertCSS({
+                target: { tabId: activeTabId },
+                files: ['styles.css']
+              }).then(() => {
+                // Try again after injection
+                chrome.tabs.sendMessage(activeTabId, { type: action }, (secondResponse) => {
+                  if (chrome.runtime.lastError) {
+                    statusMessage.textContent = 'Still cannot communicate with page';
+                    statusMessage.style.color = 'red';
+                  } else {
+                    statusMessage.textContent = action === 'SHOW_SIDEBAR' ? 'Sidebar shown' : 'Sidebar hidden';
+                    statusMessage.style.color = 'green';
+                  }
+                });
+              });
             });
-          } else {
-            statusMessage.textContent = 'Sidebar toggled';
-            statusMessage.style.color = 'green';
-            console.log('Toggle sidebar response:', response);
-            setTimeout(() => {
-              statusMessage.textContent = '';
-            }, 2000);
+          } catch (err) {
+            statusMessage.textContent = 'Cannot access this page';
+            statusMessage.style.color = 'red';
           }
-        });
-      } catch (error) {
-        statusMessage.textContent = 'Error: ' + (error as Error).message;
-        statusMessage.style.color = 'red';
-        console.error('Error in toggle action:', error);
-      }
-    });
+        } else {
+          // Success
+          statusMessage.textContent = action === 'SHOW_SIDEBAR' ? 'Sidebar shown' : 'Sidebar hidden';
+          statusMessage.style.color = 'green';
+          setTimeout(() => {
+            statusMessage.textContent = '';
+          }, 2000);
+        }
+      });
+    } catch (error) {
+      statusMessage.textContent = 'Error: ' + (error as Error).message;
+      statusMessage.style.color = 'red';
+    }
   }
   
+  // Set up event listeners for the buttons
+  if (showButton) {
+    showButton.addEventListener('click', () => sendSidebarCommand('SHOW_SIDEBAR'));
+  }
+  
+  if (hideButton) {
+    hideButton.addEventListener('click', () => sendSidebarCommand('HIDE_SIDEBAR'));
+  }
+  
+  // Model selection handling
   if (modelSelect) {
     // Load saved model preference
     chrome.storage.sync.get('preferredModel', function(data) {
@@ -81,6 +89,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Save model preference when changed
     modelSelect.addEventListener('change', function() {
+      statusMessage.textContent = `Model changed to ${modelSelect.value}`;
+      statusMessage.style.color = 'blue';
+      
       chrome.storage.sync.set({
         preferredModel: modelSelect.value
       });
@@ -93,13 +104,16 @@ document.addEventListener('DOMContentLoaded', function() {
             chrome.tabs.sendMessage(tabId, {
               type: 'MODEL_CHANGED',
               model: modelSelect.value
-            }).catch((err) => {
+            }).catch(() => {
               // Ignore errors for tabs that don't have content script
-              console.log('Could not send model change to tab:', tabId, err);
             });
           }
         });
       });
+      
+      setTimeout(() => {
+        statusMessage.textContent = '';
+      }, 2000);
     });
   }
 });

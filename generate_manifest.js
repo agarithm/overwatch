@@ -20,7 +20,7 @@ const manifestData = {
     "16": "assets/icons/icon16.png",
     "48": "assets/icons/icon48.png",
     "128": "assets/icons/icon128.png"
-  },
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -42,24 +42,18 @@ const manifestData = {
   ]
 };
 
-// Ensure the public directory exists
+// Write valid JSON (without comments) to both public and dist
 const publicDir = path.resolve(__dirname, 'public');
-if (!fs.existsSync(publicDir)) {
-  fs.mkdirSync(publicDir, { recursive: true });
-  console.log('Created public directory');
-}
-
-// Write manifest to public directory
-const manifestPath = path.join(publicDir, 'manifest.json');
-fs.writeFileSync(manifestPath, JSON.stringify(manifestData, null, 2));
-console.log(`Generated valid manifest.json at ${manifestPath}`);
-
-// Also write to dist directory if it exists
 const distDir = path.resolve(__dirname, 'dist');
-if (fs.existsSync(distDir)) {
-  const distManifestPath = path.join(distDir, 'manifest.json');
-  fs.writeFileSync(distManifestPath, JSON.stringify(manifestData, null, 2));
-  console.log(`Generated valid manifest.json at ${distManifestPath}`);
-}
+
+[publicDir, distDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  
+  const manifestPath = path.join(dir, 'manifest.json');
+  fs.writeFileSync(manifestPath, JSON.stringify(manifestData, null, 2));
+  console.log(`Generated valid manifest.json at ${manifestPath}`);
+});
 
 console.log('Manifest generation complete');

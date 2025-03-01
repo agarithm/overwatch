@@ -110,21 +110,27 @@ export class ChatSidebar {
     });
   }
 
+  public show() {
+    console.log('Show sidebar called');
+    this.isVisible = true;
+    this.container.style.right = '0px';
+    console.log('Sidebar shown, right style:', this.container.style.right);
+  }
+  
+  public hide() {
+    console.log('Hide sidebar called');
+    this.isVisible = false;
+    this.container.style.right = '-400px';
+    console.log('Sidebar hidden, right style:', this.container.style.right);
+  }
+  
+  // For backward compatibility
   public toggle() {
-    this.isVisible = !this.isVisible;
-    
-    // Force immediate style change for reliability
     if (this.isVisible) {
-      console.log('Making sidebar visible');
-      this.container.style.right = '0px';
+      this.hide();
     } else {
-      console.log('Hiding sidebar');
-      this.container.style.right = '-400px';
+      this.show();
     }
-    
-    // For debugging
-    console.log('Sidebar visibility state:', this.isVisible);
-    console.log('Current right style:', this.container.style.right);
   }
 
   public getContainer(): HTMLDivElement {

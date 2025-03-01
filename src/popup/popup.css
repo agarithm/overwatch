@@ -20,6 +20,12 @@ p {
   margin-bottom: 20px;
 }
 
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
 .action-button {
   background-color: #4285f4;
   color: white;
@@ -29,12 +35,23 @@ p {
   cursor: pointer;
   font-size: 14px;
   transition: background-color 0.2s;
-  width: 100%;
-  margin-bottom: 16px;
+  flex: 1;
 }
 
-.action-button:hover {
-  background-color: #3367d6;
+.show-button {
+  background-color: #4CAF50;
+}
+
+.show-button:hover {
+  background-color: #3d8b40;
+}
+
+.hide-button {
+  background-color: #f44336;
+}
+
+.hide-button:hover {
+  background-color: #d32f2f;
 }
 
 .divider {
@@ -65,4 +82,6 @@ label {
   text-align: center;
   font-size: 13px;
   min-height: 20px;
+  padding: 5px;
+  color: #333;
 }
