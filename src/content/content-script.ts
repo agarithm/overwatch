@@ -6,6 +6,36 @@ import '../styles/sidebar.css';
 // Use a global variable to track if we've already initialized
 const OVERWATCH_INITIALIZED = '__OVERWATCH_INITIALIZED__';
 
+// Add global keyboard shortcut listener with focus detection
+function setupKeyboardShortcuts(sidebar: ChatSidebar) {
+  document.addEventListener('keydown', (e) => {
+    // Only respond if this window/document is focused
+    if (!document.hasFocus()) {
+      return;
+    }
+    
+    // Alt+W (or Option+W on Mac) to toggle sidebar
+    if (e.altKey && (e.key === 'w' || e.key === 'W')) {
+      console.log('Hotkey detected: Alt+W');
+      
+      // Stop event propagation
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Toggle the sidebar with explicit check and immediate action
+      if (sidebar.isVisible()) {
+        console.log('Hotkey action: hiding sidebar');
+        sidebar.hide();
+      } else {
+        console.log('Hotkey action: showing sidebar');
+        sidebar.show();
+      }
+    }
+  }, true); // Use capturing phase for earliest interception
+  
+  console.log('Keyboard shortcuts initialized (Alt+W to toggle sidebar)');
+}
+
 // Check if already initialized
 if (!(window as any)[OVERWATCH_INITIALIZED]) {
   console.log('Initializing Overwatch extension');
@@ -20,6 +50,13 @@ if (!(window as any)[OVERWATCH_INITIALIZED]) {
       sidebar = new ChatSidebar();
       document.body.appendChild(sidebar.getContainer());
       console.log('Sidebar container added to DOM');
+      
+      // Set up keyboard shortcuts with a small delay to ensure sidebar is ready
+      setTimeout(() => {
+        if (sidebar) {
+          setupKeyboardShortcuts(sidebar);
+        }
+      }, 100);
       
       // Add window resize listener
       window.addEventListener('resize', () => {
@@ -36,18 +73,51 @@ if (!(window as any)[OVERWATCH_INITIALIZED]) {
 
   // Listen for messages from the popup or background script
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('Content script received message:', request.type);
+    console.log('Content script received message:', request.type, 'Source:', request.source || 'unknown');
     
     // Make sure sidebar is initialized for any operation
     if (!sidebar) {
       sidebar = initialize();
     }
-    
-    if (request.type === 'SHOW_SIDEBAR') {
+
+    // Handle toggle command which should override show/hide
+    if (request.type === 'TOGGLE_SIDEBAR') {
+      console.log('Toggle sidebar message received');
+      if (sidebar) {
+        // Use promise pattern with proper error handling
+        sidebar.toggle()
+          .then(() => {
+            sendResponse({
+              success: true, 
+              action: 'toggled', 
+              nowVisible: sidebar!.isVisible()
+            });
+          })
+          .catch(err => {
+            console.error('Error in toggle action:', err);
+            sendResponse({
+              success: false, 
+              error: 'Toggle action failed'
+            });
+          });
+      } else {
+        console.error('Failed to initialize sidebar');
+        sendResponse({
+          success: false, 
+          error: 'Failed to initialize sidebar'
+        });
+      }
+    } else if (request.type === 'SHOW_SIDEBAR') {
       console.log('Show sidebar message received');
       if (sidebar) {
-        sidebar.show();
-        sendResponse({success: true, action: 'shown'});
+        sidebar.show()
+          .then(() => {
+            sendResponse({success: true, action: 'shown'});
+          })
+          .catch(err => {
+            console.error('Error showing sidebar:', err);
+            sendResponse({success: false, error: err.message});
+          });
       } else {
         console.error('Failed to initialize sidebar');
         sendResponse({success: false, error: 'Failed to initialize sidebar'});

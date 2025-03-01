@@ -186,25 +186,40 @@ export class ChatSidebar {
     // Apply the appropriate width before showing
     this.applyInitialWidth();
     
-    this._isVisible = true;  // Use renamed property
+    // Force the browser to recompute layout before making visible
+    this.container.getBoundingClientRect();
+    
+    // Make it visible
+    this._isVisible = true;
     this.container.style.right = '0px';
+    
     console.log('Sidebar shown, width:', this.container.style.width);
+    
+    // Make sure the input field is ready for typing
+    const input = this.container.querySelector('.chat-input') as HTMLTextAreaElement;
+    if (input) {
+      setTimeout(() => {
+        input.focus();
+      }, 300); // After animation completes
+    }
   }
   
   public hide() {
     console.log('Hide sidebar called');
-    this._isVisible = false;  // Use renamed property
+    this._isVisible = false;
     this.container.style.right = '-9999px'; // Hide off-screen
     console.log('Sidebar hidden');
   }
   
-  // For backward compatibility
-  public toggle() {
-    if (this._isVisible) {  // Use renamed property
+  // Make sure toggle returns a Promise
+  public async toggle(): Promise<void> {
+    console.log('Toggle called, current visibility:', this._isVisible);
+    if (this._isVisible) {
       this.hide();
     } else {
-      this.show();
+      await this.show();
     }
+    return Promise.resolve();
   }
   
   public getContainer(): HTMLDivElement {

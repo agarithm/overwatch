@@ -85,3 +85,20 @@ label {
   padding: 5px;
   color: #333;
 }
+
+.keyboard-tip {
+  text-align: center;
+  color: #666;
+  font-size: 12px;
+  margin: 8px 0;
+}
+
+.key-combo {
+  display: inline-block;
+  background-color: #f2f2f2;
+  border: 1px solid #ddd;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-weight: bold;
+}

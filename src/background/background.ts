@@ -6,6 +6,7 @@ interface ChatMessage {
     message: string;
     pageContent: string;
     history: Array<{ role: 'user' | 'assistant'; content: string }>;
+    model?: string;
   };
 }
 
@@ -14,13 +15,14 @@ interface OllamaResponse {
 }
 
 chrome.runtime.onMessage.addListener((
-  message: ChatMessage,
+  message: any, // Use any type to avoid TypeScript errors with message format
   sender: chrome.runtime.MessageSender,
   sendResponse: (response?: any) => void
 ) => {
   if (message.type === 'CHAT_MESSAGE') {
     handleChatMessage(message.payload, sender);
   }
+  return true; // Keep the message channel open for async response
 });
 
 // Add a listener for when a tab is updated to ensure content script is there
@@ -41,6 +43,45 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       }).catch(err => console.log('CSS injection not needed or failed:', err));
     } catch (error) {
       console.error('Error injecting content script:', error);
+    }
+  }
+});
+
+// Listen for keyboard commands
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command === 'toggle-sidebar') {
+    try {
+      // Get the active tab in the currently focused window
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const activeTab = tabs[0];
+      
+      if (!activeTab || !activeTab.id) {
+        console.error('No active tab found to toggle sidebar');
+        return;
+      }
+      
+      console.log('Command received, toggling sidebar on active tab:', activeTab.id);
+      
+      // Ensure the content script is loaded before trying to send the message
+      await chrome.scripting.executeScript({
+        target: { tabId: activeTab.id },
+        func: () => {
+          return true;
+        }
+      }).catch(err => {
+        console.error('Cannot inject script in this tab:', err);
+        throw err;
+      });
+      
+      // Now send the toggle command
+      await chrome.tabs.sendMessage(activeTab.id, { 
+        type: 'TOGGLE_SIDEBAR',
+        source: 'command'
+      }).catch(err => {
+        console.error('Error toggling sidebar:', err);
+      });
+    } catch (error) {
+      console.error('Failed to handle toggle command:', error);
     }
   }
 });
@@ -90,7 +131,7 @@ async function handleChatMessage(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'mistral',
+        model: payload.model || 'mistral',
         messages: [
           {
             role: 'system',

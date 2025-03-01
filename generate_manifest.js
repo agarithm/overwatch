@@ -39,7 +39,16 @@ const manifestData = {
       "js": ["content-script.js"],
       "run_at": "document_end"
     }
-  ]
+  ],
+  "commands": {
+    "toggle-sidebar": {
+      "suggested_key": {
+        "default": "Alt+W",
+        "mac": "Alt+W"
+      },
+      "description": "Toggle the Overwatch sidebar"
+    }
+  }
 };
 
 // Write valid JSON (without comments) to both public and dist
