@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Overwatch AI</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <h2>Overwatch AI</h2>
+    <p>Control your AI assistant sidebar</p>
+    
+    <button id="toggleSidebar" class="action-button">
+      Toggle Sidebar
+    </button>
+    
+    <div class="divider"></div>
+    
+    <div class="settings">
+      <label for="model-select">Model:</label>
+      <select id="model-select">
+        <option value="mistral" selected>Mistral</option>
+        <option value="llama2">Llama 2</option>
+        <option value="gemma">Gemma</option>
+      </select>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
